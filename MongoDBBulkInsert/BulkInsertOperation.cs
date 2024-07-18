@@ -5,9 +5,9 @@ namespace MongoDBBulkInsert;
 
 public class BulkInsertOperation
 {
-    public MongoClient client { get; set; }
-    public IMongoDatabase db { get; set; }
-    public IMongoCollection<User> collection { get; set; }
+    private MongoClient client { get; set; }
+    private IMongoDatabase db { get; set; }
+    private IMongoCollection<User> collection { get; set; }
 
     public BulkInsertOperation(string connectionString, string databaseName, string collectionName)
     {
@@ -16,15 +16,16 @@ public class BulkInsertOperation
         collection = db.GetCollection<User>(collectionName);
     }
 
-    public void BulkInsert(string filePath)
+    private void BulkInsert(string filePath)
     {
         var usersBatch = new List<User>();
         using var reader = new StreamReader(filePath);
-        string line;
+        string? line;
 
         while ((line = reader.ReadLine()) != null)
         {
             var user = JsonConvert.DeserializeObject<User>(line);
+            if (user == null) { continue; }
             usersBatch.Add(user);
 
             if (usersBatch.Count >= 1000)
@@ -40,5 +41,20 @@ public class BulkInsertOperation
         }
 
         Console.WriteLine($"Bulk insrt complete for file: {filePath}");
+    }
+
+    public void BulkInsertDirectory(string directoryPath)
+    {
+        for (var fileNumber = 0; fileNumber < GetDirectorySize(directoryPath); fileNumber++)
+        {
+            var filePath = $"{directoryPath}/users{fileNumber}.jsonl";
+
+            BulkInsert(filePath);
+        }
+    }
+
+    private int GetDirectorySize(string directoryPath)
+    {
+        return Directory.GetFiles(directoryPath).Length;
     }
 }
